@@ -7,22 +7,42 @@ export default function Guestbook() {
   const [text, setText] = useState("");
   const [messages, setMessages] = useState([]);
 
-  // Load the existing messages when the page first appears.
   useEffect(() => {
     fetch("/api/messages")
       .then((res) => res.json())
-      .then((data) => setMessages(data));
+      .then((data) => setMessages(data))
+      .catch((err) => console.error("Error loading messages:", err));
   }, []);
 
   async function handleSubmit(e) {
-    // Type your name and a message, hit Sign, and watch what happens.
-    // The page flashes, the inputs empty out, and your message is gone.
-    // Then, even if it did not, nothing new ever shows up in the list below.
-    // Two things are standing between you and a guestbook that remembers people.
-    await fetch("/api/messages");
+    e.preventDefault();
 
-    setName("");
-    setText("");
+    if (!name.trim() || !text.trim()) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json", 
+        },
+        body: JSON.stringify({ name, text }), 
+      });
+
+      if (res.ok) {
+        const newMessage = await res.json();
+
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+        setName("");
+        setText("");
+      } else {
+        console.error("Server error:", res.statusText);
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+    }
   }
 
   return (
@@ -79,7 +99,7 @@ export default function Guestbook() {
           <ul className="flex flex-col gap-3">
             {messages.map((message) => (
               <li
-                key={message.id}
+                key={message.id || message.text}
                 className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
               >
                 <p className="font-medium">{message.name}</p>
